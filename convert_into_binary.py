@@ -2,45 +2,69 @@ import os
 import time
 import PIL
 import PIL.Image as Image
+import math
 
 t1 = time.time()
 
 
-file_path = "./test_file.mp4"
+def to_binary(file_path):
+    binary_string = ""
+    with open(file_path, "r", encoding="latin-1") as f:
+        for line in f:
+            for char in line:
+                binary_string += bin(ord(char))[2:].zfill(8)
+    return binary_string
 
-# convert mp4 into binary -> Black and white image (like qr code)
+def to_image(binary_string, img_path = "my.png"):
+    width = int(math.sqrt(len(binary_string)) + 1)
+    height = int(math.sqrt(len(binary_string)) + 1)
+    img = Image.new('RGB', (width, height), color = 'white')
+    pixels = img.load()
+    for i in range(img.size[0]):
+        for j in range(img.size[1]):
+            if i * height + j < len(binary_string) and binary_string[i*height + j] == "1":
+                pixels[i,j] = (0, 0, 0)
+    img.save(img_path)
 
-binary_arr = []
-
-f = open(file_path, "rb")
-
-for byte in f.read():
-    bits = bin(byte)[2:]
-    binary_arr.append(bits.zfill(8))
-
-print("Time taken to convert into binary: ", time.time() - t1)
-
-def to_img(binary_arr) -> Image:
-    pixel_amount = len(binary_arr)
+def to_file(image_path, file_path = "my", file_type = "txt"):
+    binary_string = ""
+    img = Image.open(image_path)
     
-    img_width = int(pixel_amount ** 0.5) + 1
-    imt_height = int(pixel_amount / img_width) + 1
+    for i in range(img.size[0]):
+        for j in range(img.size[1]):
+            if img.getpixel((i,j)) == (0, 0, 0):
+                binary_string += "1"
+            else:
+                binary_string += "0"
+                
     
-    pixels = []
+    f = open(file_path + "." + file_type, "w")
     
-    for byte in binary_arr:
-        for bit in byte:
-            pixels.append((int(bit), int(bit), int(bit)))
+    for i in range(0, len(binary_string), 8):
+        f.write(chr(int(binary_string[i:i+8], 2)))
     
-    img = Image.new("RGB", (img_width, imt_height))
-    
-    img.putdata(pixels)
-    
-    return img
+    return binary_string
 
-def to_file(img, fila_path) -> None:
-    # convert binary image into file
-    
-    binary_arr = []
+t1 = time.time()
 
-to_img(binary_arr).save("test_file.png")
+binary_string = to_binary("./test_file.mp4")
+
+t2 = time.time()
+time_taken = t2 - t1
+
+speed = (len(binary_string) / time_taken)//1000
+
+print("1/3", time_taken, speed, "kb/s")
+
+to_image(binary_string, "my.png")
+
+t3 = time.time()
+time_taken = t3 - t2
+
+print("2/3", time_taken)
+
+to_file("my.png", "my", "mp4")
+
+time_taken = time.time() - t3
+
+print("3/3", time_taken)
